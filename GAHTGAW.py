@@ -5,54 +5,54 @@ import time
 import sqlite3
 import string as st
 
-sqlite_file = 'C:/Users/Ahmed/Desktop/Tipe1.sq3'
+sqlite_file = './DDB.sq3'
 conn = sqlite3.connect(sqlite_file)
 cur = conn.cursor()
 
 A =st.ascii_uppercase #Alphabet
 
 
-LR=[]   #Liste surface rectangle
-LC=[]   #Liste surface cercle
+LR=[]   #List of rectangle areas
+LC=[]   #List of circle areas
 LF=[]
 t=time.time()
 cap = cv2.VideoCapture(0)
 while(cap.isOpened()):
-    # Ouvrir l'image
+    # Opens the image
     ret, img = cap.read()
 
-    # Afficher le carré sur l'écran
-    cv2.rectangle(img, (300,300), (100,100), (0,255,0)) # img point1 pt2 couleur 
+    # Shows the square
+    cv2.rectangle(img, (300,300), (100,100), (0,255,0)) # img pt1 pt2 color 
     coupe_img = img[100:300, 100:300]
 
-    # RVB vers Gris
-    grey = cv2.cvtColor(coupe_img, cv2.COLOR_BGR2GRAY) #Source , RVB vers Gris
+    # BGR to Grey
+    grey = cv2.cvtColor(coupe_img, cv2.COLOR_BGR2GRAY) #Source , BGR to Grey
 
-    # flou gaussien
+    # Guassian Blur
     value = (35, 35)
     blurred = cv2.GaussianBlur(grey, value,0)   #Flou
     cv2.imshow('gris', grey) # Nom fenêtre / Source 
 
 
-    # Seuillage : Binarisation d'Otsu (blanc et noir)
+    # Otsu's thresholding
     _, thresh1 = cv2.threshold(blurred, 127, 255,
                                cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
 
-    # fenetre Binarisation 
+    # Thresholding window
     cv2.imshow('Binarisation', thresh1) # Nom fenêtre / Source 
 
-    # contour dont surface est max 
+    # Contours with maximum area
     image, contours, hierarchy = cv2.findContours(thresh1.copy(), \
-        cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE) #source, methode pour retrouver, methode approximation de contour  
+        cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE) #source, finding method, approximation method  
 
     
     cnt = max(contours, key = lambda x: cv2.contourArea(x))
-    # Rectangle 
+    # Shows bounding rectangle 
     
     x, y, w, h = cv2.boundingRect(cnt)
     cv2.rectangle(coupe_img, (x, y), (x+w, y+h), (0, 0, 255), 0)  # x,y coord du pt haut-gauche(0,0)/ w:largeur / h:hauteur
     
-    # Cercle
+    # Shows enclosing circle
     
     centre ,rayon = cv2.minEnclosingCircle(cnt)
     c1,c2=centre
@@ -71,7 +71,7 @@ while(cap.isOpened()):
         cv2.putText(img,text,(600, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,10,5)   # Compte à rebours 
     else : 
         t=t1
-        sur_rec=np.mean(LR)   #moyenne surface
+        sur_rec=np.mean(LR)   #average of areas
         sur_cer=np.mean(LC)
         sur_fr=np.mean(LF)
         LR,LC=[],[]
@@ -82,11 +82,11 @@ while(cap.isOpened()):
             print(A[e[0]])
         
         
-    # enveloppe convexe
+    # Convex Hull
     hull = cv2.convexHull(cnt)
     
 
-    # Tracer contour
+    # Drawing the contours
     drawing = np.zeros(coupe_img.shape,np.uint8)
     cv2.drawContours(drawing, [cnt], 0, (0, 255, 0), 0)
     cv2.drawContours(drawing, [hull], 0,(0, 0, 255), 0) #source contour .... couleur epaisseur 
@@ -94,13 +94,13 @@ while(cap.isOpened()):
   
     hull = cv2.convexHull(cnt, returnPoints=False)
 
-    # changement de convexité
+    # If there's a convexity defects 
     defects = cv2.convexityDefects(cnt, hull)
     count_defects = 0
     cv2.drawContours(thresh1, contours, -1, (0, 255, 0), 3)
 
-    # Angle (Alkashi)
-    # si angle >90 ignorer
+    # Angle (Alkashi's method)
+    # if angle > 90, ignore it
     for i in range(defects.shape[0]):
         s,e,f,d = defects[i,0]
 
@@ -108,7 +108,7 @@ while(cap.isOpened()):
         end = tuple(cnt[e][0])
         far = tuple(cnt[f][0])
 
-        # longueur des cotés du triangle 
+        # lenght of each edge of the triangle
         a = math.sqrt((end[0] - start[0])**2 + (end[1] - start[1])**2)
         b = math.sqrt((far[0] - start[0])**2 + (far[1] - start[1])**2)
         c = math.sqrt((end[0] - far[0])**2 + (end[1] - far[1])**2)
@@ -121,7 +121,7 @@ while(cap.isOpened()):
             cv2.circle(coupe_img, far, 1, [0,0,255], -1)
         #dist = cv2.pointPolygonTest(cnt,far,True)
 
-        # tracer le contour (pointes des doigts)
+        # trace the outline (fingertips)
         cv2.line(coupe_img,start, end, [0,255,0], 2)
 
 
